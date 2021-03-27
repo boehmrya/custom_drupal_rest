@@ -1,0 +1,6 @@
+name: Custom API
+description: Creates custom rest resource for articles and external links.
+package: Custom
+
+type: module
+core: 8.x

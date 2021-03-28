@@ -1,1 +1,26 @@
 <?php
+
+use Drupal\node\Entity\Node;
+
+function article_block_get_content() {
+  $nids = article_block_query();
+  $nodes = Node::loadMultiple($nids);
+  $view_builder = \Drupal::entityTypeManager()->getViewBuilder('node');
+  $output_list = array();
+  foreach ($nodes as $node) {
+    $build = $view_builder->view($node, $view_mode);
+    $node_output = \Drupal::service('renderer')->render($build);
+    $output_list[] = $node_output;
+  }
+  return $output_list;
+}
+
+function article_block_query() {
+  $query = \Drupal::entityQuery('node')
+    ->condition('status', 1)
+    ->condition('type', 'article', 'IN')
+    ->sort('created', 'DESC')
+    ->pager(10);
+  $nids = $query->execute();
+  return $nids;
+}

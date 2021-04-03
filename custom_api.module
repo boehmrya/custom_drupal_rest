@@ -8,7 +8,7 @@ function article_block_get_content() {
   $view_builder = \Drupal::entityTypeManager()->getViewBuilder('node');
   $output_list = array();
   foreach ($nodes as $node) {
-    $build = $view_builder->view($node, $view_mode);
+    $build = $view_builder->view($node, 'full');
     $node_output = \Drupal::service('renderer')->render($build);
     $output_list[] = $node_output;
   }
@@ -16,11 +16,24 @@ function article_block_get_content() {
 }
 
 function article_block_query() {
+  $content_types = array(
+      'article',
+      'video'
+  );
+  $state = \Drupal::request()->get('state');
   $query = \Drupal::entityQuery('node')
-    ->condition('status', 1)
-    ->condition('type', 'article', 'IN')
-    ->sort('created', 'DESC')
-    ->pager(10);
+          ->condition('status', 1)
+          ->condition('type', $content_types, 'IN')
+          ->condition('field_states', 4);
+
+  if ($state) {
+    $and = $query->andConditionGroup()
+            ->condition('field_states', $state);
+    $query->condition($and);
+  }
+
+  $query->sort('created', 'DESC');
+  $query->pager(6);
   $nids = $query->execute();
   return $nids;
 }

@@ -46,8 +46,8 @@ class CustomResource extends ResourceBase {
       ->condition('status', 1)
       ->condition('type', $content_types, 'IN')
       ->condition('field_states.entity:taxonomy_term.field_state_id', $state_id)
-      ->sort('changed', 'DESC')
-      ->range(0, 5)
+      ->sort('created', 'ASC')
+      ->range(0, 6)
       ->execute();
 
     if ($nids) {

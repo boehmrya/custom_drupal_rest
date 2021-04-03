@@ -20,11 +20,18 @@ class ArticlesBlock extends BlockBase {
    */
   public function build() {
     $output = article_block_get_content();
-    return [
+
+    $build['result'] = [
       '#theme' => 'item_list',
       '#list_type' => 'ul',
       '#items' => $output,
     ];
+
+    $build['pager'] = [
+      '#type' => 'pager',
+    ];
+
+    return $build;
   }
 
 }

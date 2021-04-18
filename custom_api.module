@@ -1,6 +1,7 @@
 <?php
 
 use Drupal\node\Entity\Node;
+use Drupal\Core\Form\FormStateInterface;
 
 function article_block_get_content() {
   $nids = article_block_query();
@@ -33,7 +34,72 @@ function article_block_query() {
   }
 
   $query->sort('created', 'DESC');
-  $query->pager(6);
+  $query->pager(3);
   $nids = $query->execute();
   return $nids;
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for node.html.twig.
+ */
+function custom_api_preprocess_node(&$variables) {
+  //$chart_percentage = $variables['node']->get('field_chart_percentage')->getValue();
+  //dpm($chart_percentage);
+  //dpm($variables);
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function custom_api_form_alter(&$form, &$form_state, $form_id) {
+  if($form_id == 'node_page_edit_form' || $form_id == 'node_page_form') {
+    $form['field_image']['#states'] = [
+      'visible' => [
+          'select[name="field_page_type"]' => ['value' => 'image-page']
+      ]
+    ];
+
+    $form['field_description']['#states'] = [
+      'visible' => [
+          'select[name="field_page_type"]' => ['value' => 'text-page']
+      ]
+    ];
+   }
+ }
+
+
+
+ /**
+ * Implements hook_field_widget_form_alter().
+ */
+
+function custom_api_field_widget_form_alter(&$element, FormStateInterface $form_state, $context) {
+  if ($context['widget'] instanceof \Drupal\text\Plugin\Field\FieldWidget\TextfieldWidget) {
+    $element['#after_build'][] = '_allowed_formats_remove_textarea_help';
+  }
+}
+
+
+/**
+ * #after_build callback.
+ */
+
+function _allowed_formats_remove_textarea_help($form_element, FormStateInterface $form_state) {
+  //dpm($form_element['format']);
+  if (isset($form_element['format'])) {
+    $form_element['format']['format']['#default_value'] = 'full_html';
+    $form_element['format']['format']['#value'] = 'full_html';
+    unset($form_element['format']['format']['#options']['basic_html']);
+    //unset($form_element['format']['format']);
+    $form_element['format']['format']['#access'] = FALSE;
+    dpm($form_element['format']['format']);
+
+
+    // All this stuff is needed to hide the help text.
+    unset($form_element['format']['guidelines']);
+    unset($form_element['format']['help']);
+    unset($form_element['format']['#theme_wrappers']);
+  }
+
+  return $form_element;
 }

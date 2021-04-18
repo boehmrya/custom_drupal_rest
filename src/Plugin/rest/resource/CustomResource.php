@@ -7,6 +7,7 @@ use Drupal\rest\Plugin\ResourceBase;
 use Drupal\rest\ResourceResponse;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Drupal\node\Entity\Node;
+use Drupal\file\Entity\File;
 
 /**
  * Provides a resource to get view modes by entity and bundle.
@@ -53,6 +54,15 @@ class CustomResource extends ResourceBase {
     if ($nids) {
       $nodes = Node::loadMultiple($nids);
       foreach ($nodes as $node) {
+
+        if ($node->hasField('field_image')) {
+          $image_file_id = $node->get('field_image')->getValue()[0]['target_id'];
+          $file = File::load($image_file_id);
+          $file_uri = $file->getFileUri();
+          $image_style = \Drupal::entityTypeManager()->getStorage('image_style')->load('teaser');
+          $image_url = $image_style->buildUrl($file_uri);
+        }
+
         // date field
         $time = $node->getCreatedTime();
         $date = \Drupal::service('date.formatter')->format($time, 'press_release_date');

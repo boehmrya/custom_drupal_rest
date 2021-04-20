@@ -92,7 +92,6 @@ function _allowed_formats_remove_textarea_help($form_element, FormStateInterface
     unset($form_element['format']['format']['#options']['basic_html']);
     //unset($form_element['format']['format']);
     $form_element['format']['format']['#access'] = FALSE;
-    dpm($form_element['format']['format']);
 
 
     // All this stuff is needed to hide the help text.

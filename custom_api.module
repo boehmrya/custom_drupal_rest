@@ -102,3 +102,67 @@ function _allowed_formats_remove_textarea_help($form_element, FormStateInterface
 
   return $form_element;
 }
+
+
+/**
+ * Implements hook_preprocess_HOOK() for field templates.
+ *
+ * Adds a custom class to the field's class attribute
+ * according to the field formatter settings.
+ */
+function custom_api_preprocess_field(&$variables) {
+  if ($variables['element']['#field_type'] == 'image') {
+    foreach($variables['items'] as $key => $item){
+      $variables['items'][ $key ]['content']['#item_attributes']['class'][] = 'thumbnail';
+    }
+  }
+}
+
+/**
+* Implements hook_mail().
+*/
+function custom_api_mail($key, &$message, $params) {
+ $options = array(
+   'langcode' => $message['langcode'],
+ );
+
+ switch ($key) {
+   case 'create_article':
+     $message['from'] = \Drupal::config('system.site')->get('mail');
+     $message['subject'] = t('Article created: @title', array('@title' => $params['node_title']), $options);
+     $message['body'][] = $params['message'];
+     break;
+ }
+}
+
+
+/**
+* Implements hook_entity_insert().
+*/
+function custom_api_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
+
+    // exit if not an article
+   if ($entity->getEntityTypeId() !== 'node' || ($entity->getEntityTypeId() === 'node' && $entity->bundle() !== 'article')) {
+     return;
+   }
+
+   $author_email = $entity->getOwner()->getEmail();
+
+   $mailManager = \Drupal::service('plugin.manager.mail');
+   $module = 'custom_api';
+   $key = 'create_article';
+   $to = $author_email;
+   $params['message'] = $entity->get('body')->value;
+   $params['node_title'] = $entity->label();
+   $langcode = \Drupal::currentUser()->getPreferredLangcode();
+   $send = true;
+
+   $result = $mailManager->mail($module, $key, $to, $langcode, $params, NULL, $send);
+   if ($result['result'] !== true) {
+     drupal_set_message(t('There was a problem sending your message and it was not sent.'), 'error');
+   }
+   else {
+     drupal_set_message(t('Your message has been sent.'));
+   }
+
+}

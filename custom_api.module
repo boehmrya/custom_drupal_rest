@@ -166,3 +166,92 @@ function custom_api_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
    }
 
 }
+
+
+/**
+* Implements hook_entity_type_presave().
+*/
+function custom_api_node_presave(Drupal\Core\Entity\EntityInterface $entity) {
+  $values_equal = true; // flag to determine whether field values are equal
+
+  $entity_fields = $entity->getFields();
+  $original_fields = $entity->original->getFields();
+
+  // build array of fields, body, and title on new object
+  $updated_fields = [];
+  foreach ($entity_fields as $key => $value) {
+    // get all added fields, and the body and title
+    if ((strpos($key, 'field') !== false) || $key == 'body' || $key == 'title') {
+      $updated_fields[$key] = $value;
+    }
+  }
+
+  foreach ($updated_fields as $updated_fields_key => $updated_field) {
+
+    // get corresponding original field value
+    $original_field = $original_fields[$updated_fields_key];
+    $original_field_value = $original_field->getValue();
+    $updated_field_value = $updated_field->getValue();
+    //dpm($original_field_value);
+    //dpm($updated_field_value);
+
+    if (count($original_field_value) !== count($updated_field_value)) {
+      $values_equal = false;
+      break;
+    }
+
+    foreach ($original_field_value as $original_key => $original_value_array) {
+
+
+      if (array_key_exists('uri', $original_value_array) && array_key_exists('title', $original_value_array)) {
+        $original_uri_value = $original_value_array['uri']; // direct values
+        $original_title_value = $original_value_array['title'];
+        $updated_uri_value = $updated_field_value[$original_key]['uri'];
+        $updated_title_value = $updated_field_value[$original_key]['title'];
+
+        if (($original_uri_value !== $updated_uri_value) || ($original_title_value !== $updated_title_value)) {
+          $values_equal = false;
+          break;
+        }
+      }
+      elseif (array_key_exists('value', $original_value_array)) {
+        $original_value_value = $original_value_array['value']; // direct values
+        $updated_value_value = $updated_field_value[$original_key]['value'];
+
+        if ($original_value_value !== $updated_value_value) {
+          $values_equal = false;
+          break;
+        }
+      }
+      elseif (array_key_exists('target_id', $original_value_array)) {
+        $original_ref_value = $original_value_array['target_id']; // direct values
+        $updated_ref_value = $updated_field_value[$original_key]['target_id'];
+
+        if ($original_ref_value !== $updated_ref_value) {
+          $values_equal = false;
+          break;
+        }
+      }
+
+      if ($values_equal == false) {
+        break;
+      }
+    }
+
+    if ($values_equal == false) {
+      break;
+    }
+
+    //dpm($updated_fields_key);
+    //dpm($values_equal);
+  }
+
+  if ($values_equal == true) {
+    dpm("values are equal");
+  }
+  else {
+    dpm("values are not equal");
+  }
+
+
+}

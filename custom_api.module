@@ -136,35 +136,36 @@ function custom_api_mail($key, &$message, $params) {
 }
 
 
+function send_node_notification($key, $email, $entity, $node_type, $message) {
+  if (($entity->getEntityTypeId() == 'node') && ($entity->bundle() == $node_type)) {
+    $mailManager = \Drupal::service('plugin.manager.mail');
+    $module = 'custom_api';
+    $to = $email;
+    $params['message'] = $message;
+    $params['node_title'] = $entity->label();
+    $langcode = \Drupal::currentUser()->getPreferredLangcode();
+    $send = true;
+
+    $result = $mailManager->mail($module, $key, $to, $langcode, $params, NULL, $send);
+    if ($result['result'] !== true) {
+      drupal_set_message(t('There was a problem sending your message and it was not sent.'), 'error');
+    }
+    else {
+      drupal_set_message(t('Your message has been sent.'));
+    }
+  }
+}
+
+
 /**
 * Implements hook_entity_insert().
 */
-function custom_api_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
-
-    // exit if not an article
-   if ($entity->getEntityTypeId() !== 'node' || ($entity->getEntityTypeId() === 'node' && $entity->bundle() !== 'article')) {
-     return;
-   }
-
-   $author_email = $entity->getOwner()->getEmail();
-
-   $mailManager = \Drupal::service('plugin.manager.mail');
-   $module = 'custom_api';
-   $key = 'create_article';
-   $to = $author_email;
-   $params['message'] = $entity->get('body')->value;
-   $params['node_title'] = $entity->label();
-   $langcode = \Drupal::currentUser()->getPreferredLangcode();
-   $send = true;
-
-   $result = $mailManager->mail($module, $key, $to, $langcode, $params, NULL, $send);
-   if ($result['result'] !== true) {
-     drupal_set_message(t('There was a problem sending your message and it was not sent.'), 'error');
-   }
-   else {
-     drupal_set_message(t('Your message has been sent.'));
-   }
-
+function custom_api_node_insert(Drupal\Core\Entity\EntityInterface $entity) {
+    $key = 'create_article';
+    $author_email = $entity->getOwner()->getEmail();
+    $node_type = 'article';
+    $message = 'new node created ' . $entity->label();
+    send_node_notification($key, $author_email, $entity, $node_type, $message);
 }
 
 
@@ -173,6 +174,10 @@ function custom_api_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
 */
 function custom_api_node_presave(Drupal\Core\Entity\EntityInterface $entity) {
   $values_equal = true; // flag to determine whether field values are equal
+
+  if ($entity->original == null) {
+    return;
+  }
 
   $entity_fields = $entity->getFields();
   $original_fields = $entity->original->getFields();
@@ -192,8 +197,6 @@ function custom_api_node_presave(Drupal\Core\Entity\EntityInterface $entity) {
     $original_field = $original_fields[$updated_fields_key];
     $original_field_value = $original_field->getValue();
     $updated_field_value = $updated_field->getValue();
-    //dpm($original_field_value);
-    //dpm($updated_field_value);
 
     if (count($original_field_value) !== count($updated_field_value)) {
       $values_equal = false;
@@ -241,17 +244,17 @@ function custom_api_node_presave(Drupal\Core\Entity\EntityInterface $entity) {
     if ($values_equal == false) {
       break;
     }
-
-    //dpm($updated_fields_key);
-    //dpm($values_equal);
   }
 
-  if ($values_equal == true) {
-    dpm("values are equal");
+  if ($values_equal != true) {
+    $key = 'create_article';
+    $author_email = $entity->getOwner()->getEmail();
+    $node_type = 'article';
+    $message = 'Node ' . $entity->label() . '(' . $entity->id() . ') has changed ';
+    send_node_notification($key, $author_email, $entity, $node_type, $message);
   }
   else {
-    dpm("values are not equal");
+    $log_message = 'article has not changed';
+    \Drupal::logger('custom_api')->notice($log_message);
   }
-
-
 }

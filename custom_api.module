@@ -258,3 +258,54 @@ function custom_api_node_presave(Drupal\Core\Entity\EntityInterface $entity) {
     \Drupal::logger('custom_api')->notice($log_message);
   }
 }
+
+
+function exclude_current_article_block_content() {
+  $nids = exclude_current_article_query();
+  $nodes = Node::loadMultiple($nids);
+  $view_builder = \Drupal::entityTypeManager()->getViewBuilder('node');
+  $output_list = array();
+  foreach ($nodes as $node) {
+    $build = $view_builder->view($node, 'full');
+    $node_output = \Drupal::service('renderer')->render($build);
+    $output_list[] = $node_output;
+  }
+  return $output_list;
+}
+
+
+function exclude_current_article_query() {
+  $current_node = \Drupal::routeMatch()->getParameter('node');
+  $current_nid = $current_node->id();
+  $query = \Drupal::entityQuery('node')
+          ->condition('status', 1)
+          ->condition('type', 'article')
+          ->condition('nid', $current_nid, '<>');
+
+  $query->sort('created', 'DESC');
+  $nids = $query->execute();
+  return $nids;
+}
+
+
+function get_node_content($bundle, $view_mode) {
+  // query
+  $current_node = \Drupal::routeMatch()->getParameter('node');
+  $current_nid = $current_node->id();
+  $query = \Drupal::entityQuery('node')
+          ->condition('status', 1)
+          ->condition('type', $bundle);
+  $query->sort('created', 'DESC');
+  $nids = $query->execute();
+
+  // build nodes
+  $nodes = Node::loadMultiple($nids);
+  $view_builder = \Drupal::entityTypeManager()->getViewBuilder('node');
+  $output_list = array();
+  foreach ($nodes as $node) {
+    $build = $view_builder->view($node, $view_mode);
+    $node_output = \Drupal::service('renderer')->render($build);
+    $output_list[] = $node_output;
+  }
+  return $output_list;
+}
